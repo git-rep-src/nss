@@ -1,6 +1,6 @@
 CC        = g++
 CFLAGS    = -std=c++11 -Wall
-LIBS      = 
+LIBS      = -lform -lncurses
 SOURCEDIR = src
 BUILDDIR  = .build
 SOURCES   = $(wildcard src/*.cc)
