@@ -10,24 +10,99 @@ using std::stringstream;
 
 Nss::Nss()
 {
+    ui.main();
     disk();
-
-    string i = "";
-    string d = "";
-    string dt = "";
-    string a = "";
-    string p = "windows";
-    string t = "";
-    string pt = "";
-
-    search(&i, &d, &dt, &a, &p, &t, &pt);
-
-    for (size_t i = 0; i < test_ret.size(); i++)
-        std::cout << test_ret[i] << std::endl;
+    driver();
 }
 
 Nss::~Nss()
 {
+}
+
+void Nss::driver()
+{ 
+    int key;
+    int c_field = 0;
+    int n_tabs = 0;
+
+    do {
+        prefresh(ui.window, n_tabs, 0, 0, 0, (LINES - 1), (COLS - 1));
+        key = wgetch(ui.window);
+        switch(key)
+        {
+            case KEY_LEFT:
+                form_driver(ui.form, REQ_PREV_CHAR);
+                break;
+            case KEY_RIGHT:
+                form_driver(ui.form, REQ_NEXT_CHAR);
+                break;
+            case KEY_UP:
+            case KEY_DOWN:
+                if (ui.has_status) {
+                    for (int i = 0; i < COLS; i++)
+                        mvwdelch(ui.window, (0 + n_tabs), 0);
+                    ui.has_status = false;
+                }
+                if (c_field == 8)
+                    ui.marker(false);
+                else
+                    set_field_back(ui.fields[c_field], COLOR_PAIR(1));
+                if (key == KEY_UP) {
+                    if (c_field == 0)
+                        c_field = (field_count(ui.form) - 1);
+                    else
+                        --c_field;
+                    form_driver(ui.form, REQ_PREV_FIELD);
+                    form_driver(ui.form, REQ_END_LINE);
+                } else {
+                    if (c_field == (field_count(ui.form) - 1))
+                        c_field = 0;
+                    else
+                        ++c_field;
+                    form_driver(ui.form, REQ_NEXT_FIELD);
+                    form_driver(ui.form, REQ_END_LINE);
+                }
+                if (c_field == 8)
+                    ui.marker();
+                else
+                    set_field_back(ui.fields[c_field], COLOR_PAIR(2));
+                break;
+            case KEY_UP_SCREEN:
+                if (ui.has_status) {
+                    for (int i = 0; i < COLS; i++)
+                        mvwdelch(ui.window, (0 + n_tabs), 0);
+                    ui.has_status = false;
+                }
+                if (n_tabs > 0)
+                    --n_tabs;
+                break;
+            case KEY_DOWN_SCREEN:
+                if (ui.has_status) {
+                    for (int i = 0; i < COLS; i++)
+                        mvwdelch(ui.window, (0 + n_tabs), 0);
+                    ui.has_status = false;
+                }
+                if ((LINES + n_tabs) < 15)
+                    ++n_tabs;
+                prefresh(ui.window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
+                break;
+            case KEY_BACKSPACE:
+            case KEY_DELCHAR:
+            case KEY_DC:
+                form_driver(ui.form, REQ_LEFT_CHAR);
+                form_driver(ui.form, REQ_DEL_CHAR);
+                break;
+            case KEY_RETURN:
+                if (search())
+                    ui.result(&ids, &files, &descriptions, &dates, &authors, &platforms, &types, &results);
+                else
+                    ui.status("NO RESULT", n_tabs);
+                break;
+            default:
+                form_driver(ui.form, key);
+                break;
+        }
+    } while (key != KEY_QUIT);
 }
 
 void Nss::disk()
@@ -90,55 +165,63 @@ void Nss::disk()
     }
 }
 
-bool Nss::search(const string *id, const string *description, const string *date,
-                 const string *author, const string *platform, const string *type,
-                 const string *port)
+bool Nss::search()
 {
     bool is_not_found = false;
     string buf;
+    vector<string> terms;
 
+    // TODO: XML FIELD
+    for (int i = 0; i <= 6; i++) 
+        terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
+    
+    vector<int>().swap(results);
+    
     for (size_t i = 0; i < ids.size(); i++) {
-        if ((*id != "") && (ids[i].find(*id) == string::npos))
+        if ((terms[0] != "") && (ids[i].find(terms[0]) == string::npos))
             is_not_found = true;
-        if (!is_not_found && (*description != "")) {
+        if ((terms[1] != "") && !is_not_found) {
             buf = descriptions[i]; 
             std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-            if (buf.find(*description) == string::npos)
+            if (buf.find(terms[1]) == string::npos)
                 is_not_found = true;
         }
-        if (!is_not_found && (*date != "") &&
-            (dates[i].find(*date) == string::npos))
+        if ((terms[2] != "") && !is_not_found &&
+            (dates[i].find(terms[2]) == string::npos))
             is_not_found = true;
-        if (!is_not_found && (*author != "") &&
-            (authors[i].find(*author) == string::npos))
+        if ((terms[3] != "") && !is_not_found &&
+            (authors[i].find(terms[3]) == string::npos))
             is_not_found = true;
-        if (!is_not_found && (*platform != "") &&
-            (platforms[i].find(*platform) == string::npos))
+        if ((terms[4] != "") && !is_not_found &&
+            (platforms[i].find(terms[4]) == string::npos))
             is_not_found = true;
-        if (!is_not_found && (*type != "") &&
-            (types[i].find(*type) == string::npos))
+        if ((terms[5] != "") && !is_not_found &&
+            (types[i].find(terms[5]) == string::npos))
             is_not_found = true;
-        if (!is_not_found && (*port != "") &&
-            (ports[i].find(*port) == string::npos))
+        if ((terms[6] != "") && !is_not_found &&
+            (ports[i].find(terms[6]) == string::npos))
             is_not_found = true;
         
         if (!is_not_found)
-            test_ret.push_back(ids[i] + "    " + dates[i] + "    " + platforms[i] + "    " + types[i] + "    " + descriptions[i]);
+            results.push_back(i);
         else
             is_not_found = false;
     }
+
+    if (results.size() == 0)
+        return false;
 
     return true;
 }
 
 bool Nss::cli(const string &cmd, const string &args)
 {
-    char buf[BUFSIZ];
-    string command = cmd + " " + args + " 2>/dev/null";
+    //char buf[BUFSIZ];
+    //string command = cmd + " " + args + " 2>/dev/null";
    
-    FILE *fp = popen(command.c_str(), "r");
-    if (!fp)
-        return false;
+    //FILE *fp = popen(command.c_str(), "r");
+    //if (!fp)
+        //return false;
     
     /*
     while (!feof(fp))
@@ -146,8 +229,20 @@ bool Nss::cli(const string &cmd, const string &args)
             ret += buf;
     */
 
-    if (pclose(fp) != 0)
-        return false;
+    //if (pclose(fp) != 0)
+        //return false;
 
+    system("vim /home/user/file");
     return true;
+}
+
+inline string Nss::clear_whitespaces(const char *c)
+{
+    string str(c);
+    
+    str.erase(unique(str.begin(), str.end(), [] (char a, char b) {
+                     return isspace(a) && isspace(b);}), str.end());
+    str.replace((str.size() - 1), 1, "");
+
+    return str;
 }

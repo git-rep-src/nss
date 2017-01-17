@@ -1,6 +1,8 @@
 #ifndef NSS_H
 #define NSS_H
 
+#include "ui.h"
+
 #include <string>
 #include <vector>
 
@@ -14,6 +16,10 @@ public:
     ~Nss();
 
 private:
+    Ui ui;
+    
+    vector<int> results;
+    
     vector<string> ids;
     vector<string> files;
     vector<string> descriptions;
@@ -22,14 +28,12 @@ private:
     vector<string> platforms;
     vector<string> types;
     vector<string> ports;
-
-    vector<string> test_ret;
-
+    
+    void driver();
     void disk();
-    bool search(const string *id, const string *description, const string *date,
-                const string *author, const string *platform, const string *type,
-                const string *port);
+    bool search();
     bool cli(const string &cmd, const string &args);
+    string clear_whitespaces(const char *c);
 };
 
 #endif
