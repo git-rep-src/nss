@@ -49,6 +49,8 @@ Ui::~Ui()
 
 void Ui::main()
 {
+    // TODO: RESIZE.
+
     int rows;
     int cols;
     int start_x = ((w_cols - 43) / 2);
@@ -117,7 +119,7 @@ void Ui::main()
 
 
 void Ui::result(const vector<string> *ids, const vector<string> *files,
-                const vector<string> *descriptions, const vector<string> *dates,
+                vector<string> *descriptions, const vector<string> *dates,
                 const vector<string> *platforms, const vector<string> *types,
                 const vector<int> *results, const vector<string> *user_configs)
 {
@@ -130,14 +132,21 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     string cmd;
     string delimiter = ".";
 
+    string str;
+
     n_results = results->size();
 
     items = (WINDOW **) malloc ((n_results + 1) * sizeof(WINDOW *));
     items[0] = newpad((start_y + n_results + LINES), COLS);
     keypad(items[0], true);
 
-    for (size_t i = 1; i < n_results; i++) {
+    for (size_t i = 1; i <= n_results; i++) {
         items[i] = subpad(items[0], 1, (COLS - 5), (i - 1), 0);
+        p = (COLS - 54);
+        if ((*descriptions)[(*results)[i - 1]].size() >= p)
+            (*descriptions)[(*results)[i - 1]].replace((p - 3),
+                                                       ((*descriptions)[(*results)[i - 1]].size() - (p - 3)),
+                                                       "...");
         mvwprintw(items[i], 0, 0, "%s", (*descriptions)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 50), "%s", (*dates)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 36), "%s", (*platforms)[(*results)[i - 1]].c_str());
@@ -177,7 +186,7 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
                         --c_item;
                     }
                 } else {
-                    if (c_item < (n_results - 2)) {
+                    if (c_item < (n_results - 1)) {
                         wbkgd(items[c_item + 2], A_REVERSE);
                         ++c_item;
                     }
@@ -186,8 +195,8 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
             case KEY_RIGHT:
             case KEY_RETURN:
                 was_copy = false;
-                for (size_t i = 0; i < copyeds.size(); i++)
-                    if ((*ids)[(*results)[c_item]] == copyeds[i])
+                for (size_t i = 0; i < copieds.size(); i++)
+                    if ((*ids)[(*results)[c_item]] == copieds[i])
                         was_copy = true;
                 if (was_copy) { 
                     cmd = (*user_configs)[2] +
@@ -215,11 +224,11 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
                       string(" 2>/dev/null");
                 if (cli(cmd, false)) {
                     has_copy = false;
-                    for (size_t i = 0; i < copyeds.size(); i++)
-                        if ((*ids)[(*results)[c_item]] == copyeds[i])
+                    for (size_t i = 0; i < copieds.size(); i++)
+                        if ((*ids)[(*results)[c_item]] == copieds[i])
                             has_copy = true;
                     if (!has_copy)
-                        copyeds.push_back((*ids)[(*results)[c_item]]);
+                        copieds.push_back((*ids)[(*results)[c_item]]);
                     has_status = true;
                     status("FILE COPYED");
                 } else {
@@ -240,23 +249,21 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     has_status = false;
 }
 
-bool Ui::cli(const string &cmd, bool is_editor)
+void Ui::status(const string &s)
 {
-    if (is_editor) {            
-        endwin();
-        if (system(cmd.c_str()) < 0) {
-            refresh();
-            return false;
-        }
-    } else {
-        FILE *fp = popen(cmd.c_str(), "w");
-        if (!fp) 
-            return false;
-        if (pclose(fp) != 0)
-            return false;
+    if (has_status) {
+        for (int i = 0; i < COLS; i++)
+            mvwdelch(window, 0, 0);
+        prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     }
-   
-    return true;
+
+    int s_x = (COLS - s.size()) / 2; 
+    
+    mvwprintw(window, 0, s_x, s.c_str());
+    
+    prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
+    
+    has_status = true;
 }
 
 void Ui::marker(bool show)
@@ -280,21 +287,23 @@ void Ui::marker(bool show)
     }
 }
 
-void Ui::status(const string &s)
+bool Ui::cli(const string &cmd, bool is_editor)
 {
-    if (has_status) {
-        for (int i = 0; i < COLS; i++)
-            mvwdelch(window, 0, 0);
-        prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
+    if (is_editor) {            
+        endwin();
+        if (system(cmd.c_str()) < 0) {
+            refresh();
+            return false;
+        }
+    } else {
+        FILE *fp = popen(cmd.c_str(), "w");
+        if (!fp) 
+            return false;
+        if (pclose(fp) != 0)
+            return false;
     }
-
-    int s_x = (COLS - s.size()) / 2; 
-    
-    mvwprintw(window, 0, s_x, s.c_str());
-    
-    prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
-    
-    has_status = true;
+   
+    return true;
 }
 
 void Ui::clear_items()

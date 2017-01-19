@@ -30,13 +30,11 @@ public:
     
     void main();
     void result(const vector<string> *ids, const vector<string> *files,
-                const vector<string> *descriptions, const vector<string> *dates,
+                vector<string> *descriptions, const vector<string> *dates,
                 const vector<string> *platforms, const vector<string> *type,
                 const vector<int> *results, const vector<string> *user_configs);
-    void marker(bool show = true);
     void status(const string &s);
-    void clear_items();
-    void clear_form();
+    void marker(bool show = true);
 
 private:
     int w_rows;
@@ -44,11 +42,13 @@ private:
 
     size_t n_results;
 
-    vector<string> copyeds;
+    vector<string> copieds;
 
     WINDOW **items = NULL;
 
     bool cli(const string &cmd, bool is_editor);
+    void clear_items();
+    void clear_form();
 };
 
 #endif
