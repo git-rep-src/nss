@@ -7,13 +7,8 @@ using std::stringstream;
 
 Ui::Ui() :
     has_status(false),
-    field_width(43),
-    button_width(21),
     n_results(0)
 {
-    int rows;
-    int cols;
-
     initscr();
     cbreak();
     noecho();
@@ -29,19 +24,19 @@ Ui::Ui() :
         init_pair(3, COLOR_WHITE, COLOR_WHITE);
     }
     
-    if (LINES < 49)
-        rows = 49;
+    if (LINES < 24)
+        w_rows = 24;
     else
-        rows = LINES;
+        w_rows = LINES;
     
-    if (COLS < 175)
-        cols = 175;
+    if (COLS < 67)
+        w_cols = 67;
     else
-        cols = COLS;
+        w_cols = COLS;
 
-    window = newpad(rows, cols);
+    window = newpad(w_rows, w_cols);
     keypad(window, TRUE);
-    
+   
     refresh();
 }
 
@@ -56,19 +51,18 @@ void Ui::main()
 {
     int rows;
     int cols;
+    int start_x = ((w_cols - 43) / 2);
+    int start_y = ((w_rows - 16) / 2);
     
-    start_x = (COLS / 2.63);
-    start_y = (LINES / 3);
-    
-    fields[0] = new_field(1, field_width,  start_y,        start_x, 0, 0);
-    fields[1] = new_field(1, field_width,  (start_y + 2),  start_x, 0, 0);
-    fields[2] = new_field(1, field_width,  (start_y + 4),  start_x, 0, 0);
-    fields[3] = new_field(1, field_width,  (start_y + 6),  start_x, 0, 0);
-    fields[4] = new_field(1, field_width,  (start_y + 8),  start_x, 0, 0);
-    fields[5] = new_field(1, field_width,  (start_y + 10), start_x, 0, 0);
-    fields[6] = new_field(1, field_width,  (start_y + 12), start_x, 0, 0);
-    fields[7] = new_field(1, field_width,  (start_y + 14), start_x, 0, 0);
-    fields[8] = new_field(1, button_width, (start_y + 16), (start_x + 11), 0, 0);
+    fields[0] = new_field(1, 43, start_y,        start_x, 0, 0);
+    fields[1] = new_field(1, 43, (start_y + 2),  start_x, 0, 0);
+    fields[2] = new_field(1, 43, (start_y + 4),  start_x, 0, 0);
+    fields[3] = new_field(1, 43, (start_y + 6),  start_x, 0, 0);
+    fields[4] = new_field(1, 43, (start_y + 8),  start_x, 0, 0);
+    fields[5] = new_field(1, 43, (start_y + 10), start_x, 0, 0);
+    fields[6] = new_field(1, 43, (start_y + 12), start_x, 0, 0);
+    fields[7] = new_field(1, 43, (start_y + 14), start_x, 0, 0);
+    fields[8] = new_field(1, 21, (start_y + 16), (start_x + 11), 0, 0);
     fields[9] = NULL;
     
     set_field_just(fields[0], JUSTIFY_CENTER);
@@ -95,7 +89,7 @@ void Ui::main()
     set_field_back(fields[8], COLOR_PAIR(1));
     
     stringstream ss;
-    ss << std::setw(button_width / 2.7) << std::setfill(' ') << "" << "SEARCH";
+    ss << std::setw(7.77) << std::setfill(' ') << "" << "SEARCH";
     set_field_buffer(fields[8], 0, ss.str().c_str());
     
     form = new_form(fields);
@@ -116,7 +110,7 @@ void Ui::main()
     prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     
     status("<CU> UPDATE | <CE> EXIT");
-    
+
     set_current_field(form, fields[0]);
     form_driver(form, REQ_END_LINE);
 }
@@ -124,18 +118,19 @@ void Ui::main()
 
 void Ui::result(const vector<string> *ids, const vector<string> *files,
                 const vector<string> *descriptions, const vector<string> *dates,
-                const vector<string> *authors, const vector<string> *platforms,
-                const vector<string> *types, const vector<int> *results,
-                const vector<string> *user_configs)
+                const vector<string> *platforms, const vector<string> *types,
+                const vector<int> *results, const vector<string> *user_configs)
 {
+    bool has_copy;
+    bool was_copy;
     int key;
+    int start_y = (LINES / 10);
     size_t p;
     unsigned int c_item = 0;
     string cmd;
     string delimiter = ".";
 
     n_results = results->size();
-    start_y = (LINES / 10);
 
     items = (WINDOW **) malloc ((n_results + 1) * sizeof(WINDOW *));
     items[0] = newpad((start_y + n_results + LINES), COLS);
@@ -190,24 +185,41 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
                 break;
             case KEY_RIGHT:
             case KEY_RETURN:
-                // TODO: CHECK IF FILE IS COPY TO PASS NEW PATH TO OPEN.
-                cmd = (*user_configs)[2] +
-                      string(" ") +
-                      (*user_configs)[0] +
-                      (*files)[(*results)[c_item]];
+                was_copy = false;
+                for (size_t i = 0; i < copyeds.size(); i++)
+                    if ((*ids)[(*results)[c_item]] == copyeds[i])
+                        was_copy = true;
+                if (was_copy) { 
+                    cmd = (*user_configs)[2] +
+                          string(" ") +
+                          (*user_configs)[1] +
+                          (*ids)[(*results)[c_item]] +
+                          string(".*");
+                } else {
+                    cmd = (*user_configs)[2] +
+                          string(" ") +
+                          (*user_configs)[0] +
+                          (*files)[(*results)[c_item]];
+                }
                 if (!cli(cmd, true)) {
                     has_status = true;
                     status("OPEN FILE ERROR");
                 }
                 break;
             case KEY_CP:
-                cmd = "cp " +
+                cmd = "cp -f " +
                       (*user_configs)[0] +
                       (*files)[(*results)[c_item]] +
                       string(" ") +
                       (*user_configs)[1] +
                       string(" 2>/dev/null");
                 if (cli(cmd, false)) {
+                    has_copy = false;
+                    for (size_t i = 0; i < copyeds.size(); i++)
+                        if ((*ids)[(*results)[c_item]] == copyeds[i])
+                            has_copy = true;
+                    if (!has_copy)
+                        copyeds.push_back((*ids)[(*results)[c_item]]);
                     has_status = true;
                     status("FILE COPYED");
                 } else {

@@ -31,21 +31,20 @@ public:
     void main();
     void result(const vector<string> *ids, const vector<string> *files,
                 const vector<string> *descriptions, const vector<string> *dates,
-                const vector<string> *authors, const vector<string> *platforms,
-                const vector<string> *type, const vector<int> *results,
-                const vector<string> *user_configs);
+                const vector<string> *platforms, const vector<string> *type,
+                const vector<int> *results, const vector<string> *user_configs);
     void marker(bool show = true);
     void status(const string &s);
     void clear_items();
     void clear_form();
 
 private:
-    int start_x;
-    int start_y;
-    int field_width;
-    int button_width;
+    int w_rows;
+    int w_cols;
 
     size_t n_results;
+
+    vector<string> copyeds;
 
     WINDOW **items = NULL;
 
