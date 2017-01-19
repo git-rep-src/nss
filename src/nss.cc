@@ -194,12 +194,14 @@ void Nss::driver()
                     form_driver(ui.form, REQ_DEL_CHAR);
                     break;
                 case KEY_RETURN:
-                    if (search())
-                        ui.result(&ids, &files, &descriptions,
-                                  &dates, &platforms, &types,
-                                  &results, &user_configs);
-                    else
-                        ui.status("NO RESULT");
+                    if (c_field == 8) {
+                        if (search())
+                            ui.result(&ids, &files, &descriptions,
+                                      &dates, &platforms, &types,
+                                      &results, &user_configs);
+                        else
+                            ui.status("NO RESULT");
+                    }
                     break;
                 case KEY_UPDATE:
                     if (update()) {
