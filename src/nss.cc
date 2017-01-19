@@ -6,8 +6,6 @@
 #include <unistd.h>
 #include <pwd.h>
 
-#include <iostream>//
-
 using std::ifstream;
 using std::stringstream;
 
@@ -198,8 +196,8 @@ void Nss::driver()
                 case KEY_RETURN:
                     if (search())
                         ui.result(&ids, &files, &descriptions,
-                                  &dates, &authors, &platforms,
-                                  &types, &results, &user_configs);
+                                  &dates, &platforms, &types,
+                                  &results, &user_configs);
                     else
                         ui.status("NO RESULT");
                     break;
@@ -225,14 +223,20 @@ void Nss::driver()
 
 bool Nss::search()
 {
+    bool is_empty = true;
     bool is_not_found = false;
     string buf;
     vector<string> terms;
 
     // TODO: XML FIELD
-    // TODO: CHECK IF ALL FIELDS ARE BLANK
-    for (int i = 0; i <= 6; i++) 
+    for (int i = 0; i <= 6; i++) { 
         terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
+        if (terms[i] != "")
+            is_empty = false;
+    }
+
+    if (is_empty)
+        return false;
     
     vector<int>().swap(results);
     
