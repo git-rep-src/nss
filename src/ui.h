@@ -9,10 +9,10 @@
 using std::string;
 using std::vector;
 
+const int KEY_UPDATE = 21;
+const int KEY_CP = 16;
 const int KEY_DELCHAR = 127;
 const int KEY_RETURN = 10;
-const int KEY_UP_SCREEN = 21;
-const int KEY_DOWN_SCREEN = 4;
 const int KEY_ESCAPE = 27;
 const int KEY_QUIT = 5;
 
@@ -32,9 +32,10 @@ public:
     void result(const vector<string> *ids, const vector<string> *files,
                 const vector<string> *descriptions, const vector<string> *dates,
                 const vector<string> *authors, const vector<string> *platforms,
-                const vector<string> *type, const vector<int> *results);
+                const vector<string> *type, const vector<int> *results,
+                const vector<string> *user_configs);
     void marker(bool show = true);
-    void status(const string &s, int n_tabs);
+    void status(const string &s);
     void clear_items();
     void clear_form();
 
@@ -48,7 +49,7 @@ private:
 
     WINDOW **items = NULL;
 
-    bool result_do(const vector<string> **files, unsigned int c_item);
+    bool cli(const string &cmd, bool is_editor);
 };
 
 #endif

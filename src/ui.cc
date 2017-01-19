@@ -58,7 +58,7 @@ void Ui::main()
     int cols;
     
     start_x = (COLS / 2.63);
-    start_y = (LINES / 2.45);
+    start_y = (LINES / 3);
     
     fields[0] = new_field(1, field_width,  start_y,        start_x, 0, 0);
     fields[1] = new_field(1, field_width,  (start_y + 2),  start_x, 0, 0);
@@ -115,7 +115,7 @@ void Ui::main()
 
     prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     
-    status("<CE> EXIT", 0);
+    status("<CU> UPDATE | <CE> EXIT");
     
     set_current_field(form, fields[0]);
     form_driver(form, REQ_END_LINE);
@@ -125,26 +125,31 @@ void Ui::main()
 void Ui::result(const vector<string> *ids, const vector<string> *files,
                 const vector<string> *descriptions, const vector<string> *dates,
                 const vector<string> *authors, const vector<string> *platforms,
-                const vector<string> *types, const vector<int> *results)
+                const vector<string> *types, const vector<int> *results,
+                const vector<string> *user_configs)
 {
     int key;
+    size_t p;
     unsigned int c_item = 0;
+    string cmd;
+    string delimiter = ".";
 
     n_results = results->size();
-    
     start_y = (LINES / 10);
 
     items = (WINDOW **) malloc ((n_results + 1) * sizeof(WINDOW *));
-    //items[0] = newpad((n_results + start_y), COLS);
     items[0] = newpad((start_y + n_results + LINES), COLS);
     keypad(items[0], true);
-    
+
     for (size_t i = 1; i < n_results; i++) {
         items[i] = subpad(items[0], 1, (COLS - 5), (i - 1), 0);
         mvwprintw(items[i], 0, 0, "%s", (*descriptions)[(*results)[i - 1]].c_str());
-        mvwprintw(items[i], 0, (COLS - 44), "%s", (*dates)[(*results)[i - 1]].c_str());
-        mvwprintw(items[i], 0, (COLS - 30), "%s", (*platforms)[(*results)[i - 1]].c_str());
-        mvwprintw(items[i], 0, (COLS - 18), "%s", (*types)[(*results)[i - 1]].c_str());
+        mvwprintw(items[i], 0, (COLS - 50), "%s", (*dates)[(*results)[i - 1]].c_str());
+        mvwprintw(items[i], 0, (COLS - 36), "%s", (*platforms)[(*results)[i - 1]].c_str());
+        mvwprintw(items[i], 0, (COLS - 24), "%s", (*types)[(*results)[i - 1]].c_str());
+        p = (*files)[(*results)[i - 1]].find(delimiter);
+        mvwprintw(items[i], 0, (COLS - 13), "%s",
+                  (*files)[(*results)[i - 1]].substr((p + 1), (*files)[(*results)[i - 1]].size()).c_str());
     }
     
     wbkgd(items[1], COLOR_PAIR(2));
@@ -152,7 +157,8 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     
     prefresh(items[0], 0, 0, start_y, 5, (LINES - start_y), (COLS - 5));
     
-    status("<INTRO> OPEN | <CC> COPY | <ESC> BACK", 0);
+    status("<INTRO> OPEN | <CP> COPY | <ESC> BACK");
+    has_status = false;
     
     do {
         prefresh(items[0], c_item, 0, start_y, 5, (LINES - start_y), (COLS - 5));
@@ -163,21 +169,51 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
                 key = KEY_ESCAPE;
                 break;
             case KEY_UP:
-                if (c_item > 0) {
-                    wbkgd(items[c_item + 1], COLOR_PAIR(2));
-                    --c_item;
-                }
-                break;
             case KEY_DOWN:
-                if (c_item < (n_results - 2)) {
-                    wbkgd(items[c_item + 2], A_REVERSE);
-                    ++c_item;
+                if (has_status) {
+                    for (int i = 0; i < COLS; i++)
+                        mvwdelch(window, 0, 0);
+                    status("<INTRO> OPEN | <CP> COPY | <ESC> BACK");
+                    has_status = false;
+                }
+                if (key == KEY_UP) { 
+                    if (c_item > 0) {
+                        wbkgd(items[c_item + 1], COLOR_PAIR(2));
+                        --c_item;
+                    }
+                } else {
+                    if (c_item < (n_results - 2)) {
+                        wbkgd(items[c_item + 2], A_REVERSE);
+                        ++c_item;
+                    }
                 }
                 break;
             case KEY_RIGHT:
             case KEY_RETURN:
-                system("bash -t -c 'vim /home/user/file'");
-                //report_details(&ids, (c_item + 1), 0); //n
+                // TODO: CHECK IF FILE IS COPY TO PASS NEW PATH TO OPEN.
+                cmd = (*user_configs)[2] +
+                      string(" ") +
+                      (*user_configs)[0] +
+                      (*files)[(*results)[c_item]];
+                if (!cli(cmd, true)) {
+                    has_status = true;
+                    status("OPEN FILE ERROR");
+                }
+                break;
+            case KEY_CP:
+                cmd = "cp " +
+                      (*user_configs)[0] +
+                      (*files)[(*results)[c_item]] +
+                      string(" ") +
+                      (*user_configs)[1] +
+                      string(" 2>/dev/null");
+                if (cli(cmd, false)) {
+                    has_status = true;
+                    status("FILE COPYED");
+                } else {
+                    has_status = true;
+                    status("COPY FILE ERROR");
+                }
                 break;
             default:
                 break;
@@ -185,11 +221,29 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     } while (key != KEY_ESCAPE);
    
     clear_items();
+    
+    for (int i = 0; i < COLS; i++)
+        mvwdelch(window, 0, 0);
+
+    has_status = false;
 }
 
-bool Ui_result_do(const vector<string> **files, unsigned int c_item)
+bool Ui::cli(const string &cmd, bool is_editor)
 {
-    string test = (**files)[c_item];
+    if (is_editor) {            
+        endwin();
+        if (system(cmd.c_str()) < 0) {
+            refresh();
+            return false;
+        }
+    } else {
+        FILE *fp = popen(cmd.c_str(), "w");
+        if (!fp) 
+            return false;
+        if (pclose(fp) != 0)
+            return false;
+    }
+   
     return true;
 }
 
@@ -214,17 +268,17 @@ void Ui::marker(bool show)
     }
 }
 
-void Ui::status(const string &s, int n_tabs)
+void Ui::status(const string &s)
 {
     if (has_status) {
         for (int i = 0; i < COLS; i++)
-            mvwdelch(window, (0 + n_tabs), 0);
+            mvwdelch(window, 0, 0);
         prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     }
 
     int s_x = (COLS - s.size()) / 2; 
     
-    mvwprintw(window, (0 + n_tabs), s_x, s.c_str());
+    mvwprintw(window, 0, s_x, s.c_str());
     
     prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     
