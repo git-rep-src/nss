@@ -17,9 +17,12 @@ public:
 
 private:
     Ui ui;
-    
+   
+    bool is_ui_blocked;
+
     vector<int> results;
     
+    vector<string> user_configs;
     vector<string> ids;
     vector<string> files;
     vector<string> descriptions;
@@ -28,11 +31,12 @@ private:
     vector<string> platforms;
     vector<string> types;
     vector<string> ports;
-    
+
+    bool config();
+    bool csv();
     void driver();
-    void disk();
     bool search();
-    bool cli(const string &cmd, const string &args);
+    bool update();
     string clear_whitespaces(const char *c);
 };
 
