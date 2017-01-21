@@ -1,10 +1,15 @@
 #include "nss.h"
 
+#include <libxml++/libxml++.h>
+
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <stdexcept>
 #include <unistd.h>
 #include <pwd.h>
+
+#include <iostream>//
 
 using std::ifstream;
 using std::stringstream;
@@ -206,13 +211,13 @@ void Nss::driver()
                 case KEY_UPDATE:
                     if (update()) {
                         if (csv()) {
-                            ui.status("UPDATED");
+                            ui.status("DB UPDATED");
                         } else {    
                             ui.status("CSV FILE ERROR | <CE> EXIT");
                             is_ui_blocked = true;
                         }
                     } else {
-                        ui.status("UPDATE ERROR");
+                        ui.status("UPDATE DB ERROR");
                     }
                     break;
                 default:
@@ -230,8 +235,9 @@ bool Nss::search()
     string buf;
     vector<string> terms;
 
-    // TODO: XML FIELD
-    for (int i = 0; i <= 6; i++) { 
+    vector<int>().swap(results);
+    
+    for (int i = 0; i <= 7; i++) { 
         terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
         if (terms[i] != "")
             is_empty = false;
@@ -240,41 +246,110 @@ bool Nss::search()
     if (is_empty)
         return false;
     
-    vector<int>().swap(results);
-    
-    for (size_t i = 0; i < ids.size(); i++) {
-        if ((terms[0] != "") && (ids[i].find(terms[0]) == string::npos))
-            is_not_found = true;
-        if ((terms[1] != "") && !is_not_found) {
-            buf = descriptions[i]; 
-            std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-            if (buf.find(terms[1]) == string::npos)
+    if (terms[7] == "") {
+        for (size_t i = 0; i < ids.size(); i++) {
+            if ((terms[0] != "") && (ids[i].find(terms[0]) == string::npos))
                 is_not_found = true;
+            if ((terms[1] != "") && !is_not_found) {
+                buf = descriptions[i]; 
+                std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                if (buf.find(terms[1]) == string::npos)
+                    is_not_found = true;
+            }
+            if ((terms[2] != "") && !is_not_found &&
+                (dates[i].find(terms[2]) == string::npos))
+                is_not_found = true;
+            if ((terms[3] != "") && !is_not_found &&
+                (authors[i].find(terms[3]) == string::npos))
+                is_not_found = true;
+            if ((terms[4] != "") && !is_not_found &&
+                (platforms[i].find(terms[4]) == string::npos))
+                is_not_found = true;
+            if ((terms[5] != "") && !is_not_found &&
+                (types[i].find(terms[5]) == string::npos))
+                is_not_found = true;
+            if ((terms[6] != "") && !is_not_found &&
+                (ports[i].find(terms[6]) == string::npos))
+                is_not_found = true;
+            
+            if (!is_not_found)
+                results.push_back(i);
+            else
+                is_not_found = false;
         }
-        if ((terms[2] != "") && !is_not_found &&
-            (dates[i].find(terms[2]) == string::npos))
-            is_not_found = true;
-        if ((terms[3] != "") && !is_not_found &&
-            (authors[i].find(terms[3]) == string::npos))
-            is_not_found = true;
-        if ((terms[4] != "") && !is_not_found &&
-            (platforms[i].find(terms[4]) == string::npos))
-            is_not_found = true;
-        if ((terms[5] != "") && !is_not_found &&
-            (types[i].find(terms[5]) == string::npos))
-            is_not_found = true;
-        if ((terms[6] != "") && !is_not_found &&
-            (ports[i].find(terms[6]) == string::npos))
-            is_not_found = true;
-        
-        if (!is_not_found)
-            results.push_back(i);
-        else
-            is_not_found = false;
+    } else {
+        buf = terms[7];
+        vector<string>().swap(terms);
+        if (xml(buf, &terms)) {
+            for (size_t i = 0; i < terms.size(); i++) { //TODO: CHECK IF ARE LOT OF RESULT. TRY THE TWO TERMS TOGETHER. CREATE LIST OF 'very common'.
+                for (size_t ii = 0; ii < 2; ii++) { //TODO: CHECK IF EXISTS TWO TERMS.
+                    int p = terms[i].find(" ");
+                    for (size_t iii = 0; iii < ids.size(); iii++) {
+                        buf = descriptions[iii]; 
+                        std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                        if (buf.find(terms[i].substr(0, p)) != string::npos)
+                            results.push_back(iii);
+                    }
+                    terms[i].erase(0, (p + 1));
+                }
+            }
+        } else {
+            return false;
+        }
     }
 
     if (results.size() == 0)
         return false;
+
+    return true;
+}
+
+bool Nss::xml(const string &path, vector<string> *terms)
+{
+    string buf;
+    const vector<string> xpaths = {"/nmaprun/host/ports/port/state",
+                                   "/nmaprun/host/ports/port/service"};
+    const vector<string> xattributes = {"state", "product", "version"};
+
+    try {
+        xmlpp::DomParser parser;
+        parser.parse_file(path);
+        xmlpp::Node *root = parser.get_document()->get_root_node();
+        
+        xmlpp::Node::NodeSet node;
+        xmlpp::Element *element;
+        xmlpp::Attribute *attribute;
+
+        node = root->find(xpaths[0]);
+
+        if (node.size() == 0) {
+            return false;
+        } else {
+            for (size_t i = 0; i < node.size(); i++) {
+                node = root->find(xpaths[0]);
+                element = (xmlpp::Element *)node.at(i);
+                attribute = element->get_attribute(xattributes[0]);
+                if (attribute) {
+                    if (attribute->get_value() == "open") {
+                        node = root->find(xpaths[1]);
+                        element = (xmlpp::Element *)node.at(i);
+                        for (size_t ii = 1; ii < 3; ii++) {
+                            attribute = element->get_attribute(xattributes[ii]);
+                            if (attribute)
+                                buf = buf + attribute->get_value();
+                        }
+                        if (buf != "") {
+                            std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                            terms->push_back(buf);
+                        }
+                        buf.clear();
+                    }
+                }
+            }
+        }
+    } catch (...) {
+        return false;
+    }
 
     return true;
 }
@@ -288,7 +363,7 @@ bool Nss::update()
                  string("git checkout -- . && git pull origin master)") +
                  string(" > /dev/null 2>&1"); 
                 
-    ui.status("UPDATING");
+    ui.status("UPDATING DB");
     curs_set(0);
     
     FILE *fp = popen(cmd.c_str(), "w");

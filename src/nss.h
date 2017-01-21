@@ -36,6 +36,7 @@ private:
     bool csv();
     void driver();
     bool search();
+    bool xml(const string &path, vector<string> *terms);
     bool update();
     string clear_whitespaces(const char *c);
 };
