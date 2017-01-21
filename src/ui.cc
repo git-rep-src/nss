@@ -107,11 +107,11 @@ void Ui::main()
     mvwprintw(window, (start_y + 8),  (start_x - 10), "PLATFORM");
     mvwprintw(window, (start_y + 10), (start_x - 6),  "TYPE");
     mvwprintw(window, (start_y + 12), (start_x - 6),  "PORT");
-    mvwprintw(window, (start_y + 14), (start_x - 5),  "XML");
+    mvwprintw(window, (start_y + 14), (start_x - 6),  "NMAP");
 
     prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
     
-    status("<CU> UPDATE | <CE> EXIT");
+    status("<CU> UPDATE DB | <CE> EXIT");
 
     set_current_field(form, fields[0]);
     form_driver(form, REQ_END_LINE);
@@ -130,9 +130,6 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     size_t p;
     unsigned int c_item = 0;
     string cmd;
-    string delimiter = ".";
-
-    string str;
 
     n_results = results->size();
 
@@ -145,13 +142,13 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
         p = (COLS - 54);
         if ((*descriptions)[(*results)[i - 1]].size() >= p)
             (*descriptions)[(*results)[i - 1]].replace((p - 3),
-                                                       ((*descriptions)[(*results)[i - 1]].size() - (p - 3)),
-                                                       "...");
+                                                       ((*descriptions)[(*results)[i - 1]].size() -
+                                                        (p - 3)), "...");
         mvwprintw(items[i], 0, 0, "%s", (*descriptions)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 50), "%s", (*dates)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 36), "%s", (*platforms)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 24), "%s", (*types)[(*results)[i - 1]].c_str());
-        p = (*files)[(*results)[i - 1]].find(delimiter);
+        p = (*files)[(*results)[i - 1]].find(".");
         mvwprintw(items[i], 0, (COLS - 13), "%s",
                   (*files)[(*results)[i - 1]].substr((p + 1), (*files)[(*results)[i - 1]].size()).c_str());
     }
