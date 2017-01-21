@@ -1,6 +1,6 @@
 CC        = g++
-CFLAGS    = -std=c++11 -Wall
-LIBS      = -lform -lncurses
+CFLAGS    = $(shell pkg-config libxml++-3.0 --cflags) -std=c++11 -Wall
+LIBS      = $(shell pkg-config libxml++-3.0 --libs) -lform -lncurses
 SOURCEDIR = src
 BUILDDIR  = .build
 SOURCES   = $(wildcard src/*.cc)
