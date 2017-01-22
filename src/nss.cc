@@ -147,6 +147,7 @@ void Nss::driver()
 { 
     int key;
     int c_field = 0;
+    vector<string> terms;
     
     do {
         prefresh(ui.window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
@@ -200,7 +201,19 @@ void Nss::driver()
                     break;
                 case KEY_RETURN:
                     if (c_field == 8) {
-                        if (search())
+                        bool has_terms = false;
+                        bool is_xml = false;
+                        vector<string>().swap(terms);
+                        for (int i = 0; i <= 7; i++) { 
+                            terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
+                            if (terms[i] != "")
+                                has_terms = true;
+                        }
+                        if (!has_terms)
+                            break;
+                        else if (terms[7] != "")
+                            is_xml = true;
+                        if (search(&terms, is_xml))
                             ui.result(&ids, &files, &descriptions,
                                       &dates, &platforms, &types,
                                       &results, &user_configs);
@@ -228,48 +241,57 @@ void Nss::driver()
     } while (key != KEY_QUIT);
 }
 
-bool Nss::search()
+bool Nss::search(vector<string> *terms, bool is_xml)
 {
-    bool is_empty = true;
     bool is_not_found = false;
+    bool is_invalid_term = false;
+    string first_term;
+    string second_term;
+    string term;
     string buf;
-    vector<string> terms;
+    stringstream ss;
+    vector<int> n_results;
+    const vector<string> invalid_terms =
+    {
+        "microsoft",
+        "windows",
+        "linux",
+        "oracle",
+        "apache",
+        "http",
+        "ftp",
+        "ssh",
+        "net",
+        "wireless",
+        "wifi"
+    };
 
     vector<int>().swap(results);
     
-    for (int i = 0; i <= 7; i++) { 
-        terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
-        if (terms[i] != "")
-            is_empty = false;
-    }
-
-    if (is_empty)
-        return false;
-    
-    if (terms[7] == "") {
+    if (!is_xml) {
         for (size_t i = 0; i < ids.size(); i++) {
-            if ((terms[0] != "") && (ids[i].find(terms[0]) == string::npos))
+            if (((*terms)[0] != "") && (ids[i].find((*terms)[0]) == string::npos))
                 is_not_found = true;
-            if ((terms[1] != "") && !is_not_found) {
+            if (((*terms)[1] != "") && !is_not_found) {
                 buf = descriptions[i]; 
                 std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-                if (buf.find(terms[1]) == string::npos)
+                if (buf.find((*terms)[1]) == string::npos)
                     is_not_found = true;
             }
-            if ((terms[2] != "") && !is_not_found &&
-                (dates[i].find(terms[2]) == string::npos))
+            if (((*terms)[2] != "") && !is_not_found &&
+                (dates[i].find((*terms)[2]) == string::npos))
                 is_not_found = true;
-            if ((terms[3] != "") && !is_not_found &&
-                (authors[i].find(terms[3]) == string::npos))
+            if (((*terms)[3] != "") && !is_not_found &&
+                (authors[i].find((*terms)[3]) == string::npos))
                 is_not_found = true;
-            if ((terms[4] != "") && !is_not_found &&
-                (platforms[i].find(terms[4]) == string::npos))
+            if (((*terms)[4] != "") && !is_not_found &&
+                (platforms[i].find((*terms)[4]) == string::npos))
                 is_not_found = true;
-            if ((terms[5] != "") && !is_not_found &&
-                (types[i].find(terms[5]) == string::npos))
+            if (((*terms)[5] != "") && !is_not_found &&
+                (types[i].find((*terms)[5]) == string::npos))
                 is_not_found = true;
-            if ((terms[6] != "") && !is_not_found &&
-                (ports[i].find(terms[6]) == string::npos))
+            if (((*terms)[6] != "") && !is_not_found &&
+                (ports[i].find((*terms)[6]) == string::npos))
                 is_not_found = true;
             
             if (!is_not_found)
@@ -278,20 +300,42 @@ bool Nss::search()
                 is_not_found = false;
         }
     } else {
-        buf = terms[7];
-        vector<string>().swap(terms);
+        buf = (*terms)[7];
+        vector<string>().swap((*terms));
         if (xml(buf, &terms)) {
-            for (size_t i = 0; i < terms.size(); i++) { //TODO: CHECK IF ARE LOT OF RESULT. TRY THE TWO TERMS TOGETHER. CREATE LIST OF 'very common'.
-                for (size_t ii = 0; ii < 2; ii++) { //TODO: CHECK IF EXISTS TWO TERMS.
-                    int p = terms[i].find(" ");
-                    for (size_t iii = 0; iii < ids.size(); iii++) {
-                        buf = descriptions[iii]; 
-                        std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-                        if (buf.find(terms[i].substr(0, p)) != string::npos)
-                            results.push_back(iii);
+            for (size_t i = 0; i < terms->size(); i++) {
+                ss.str((*terms)[i]);
+                ss >> first_term >> second_term;
+                term = ss.str();
+                for (size_t ii = 0; ii < 4; ii++) {
+                    vector<int>().swap(n_results);
+                    switch(ii)
+                    {
+                        case 1:
+                            term = first_term + string(" ") + second_term;
+                            break;
+                        case 2:
+                            term = first_term;
+                            break;
+                        case 3:
+                            term = second_term;
+                            break;
                     }
-                    terms[i].erase(0, (p + 1));
-                }
+                    for (size_t iii = 0; iii < invalid_terms.size(); iii++)
+                        if (term == invalid_terms[iii])
+                            is_invalid_term = true;
+                    if (!is_invalid_term) {
+                        for (size_t iiii = 0; iiii < ids.size(); iiii++) {
+                            buf = descriptions[iiii]; 
+                            std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                            if (buf.find(term) != string::npos)
+                                n_results.push_back(iiii);
+                        }
+                        if (n_results.size() < 100)
+                            for (size_t iiiii = 0; iiiii < n_results.size(); iiiii++)
+                                results.push_back(n_results[iiiii]);
+                    }
+                } // TODO: FALTA LEER EL ULTIMO TERM (Dropbear) Y LIMPIAR (/-_) EN xml().
             }
         } else {
             return false;
@@ -304,11 +348,14 @@ bool Nss::search()
     return true;
 }
 
-bool Nss::xml(const string &path, vector<string> *terms)
+bool Nss::xml(const string &path, vector<string> **terms)
 {
     string buf;
-    const vector<string> xpaths = {"/nmaprun/host/ports/port/state",
-                                   "/nmaprun/host/ports/port/service"};
+    const vector<string> xpaths =
+    {
+        "/nmaprun/host/ports/port/state",
+        "/nmaprun/host/ports/port/service"
+    };
     const vector<string> xattributes = {"state", "product", "version"};
 
     try {
@@ -336,11 +383,11 @@ bool Nss::xml(const string &path, vector<string> *terms)
                         for (size_t ii = 1; ii < 3; ii++) {
                             attribute = element->get_attribute(xattributes[ii]);
                             if (attribute)
-                                buf = buf + attribute->get_value();
+                                buf = buf + string(" ") + attribute->get_value();
                         }
                         if (buf != "") {
                             std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-                            terms->push_back(buf);
+                            (*terms)->push_back(buf);
                         }
                         buf.clear();
                     }
