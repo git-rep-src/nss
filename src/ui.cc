@@ -150,7 +150,8 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
         mvwprintw(items[i], 0, (COLS - 24), "%s", (*types)[(*results)[i - 1]].c_str());
         p = (*files)[(*results)[i - 1]].find(".");
         mvwprintw(items[i], 0, (COLS - 13), "%s",
-                  (*files)[(*results)[i - 1]].substr((p + 1), (*files)[(*results)[i - 1]].size()).c_str());
+                  (*files)[(*results)[i - 1]].substr((p + 1),
+                  (*files)[(*results)[i - 1]].size()).c_str());
     }
     
     wbkgd(items[1], COLOR_PAIR(2));
