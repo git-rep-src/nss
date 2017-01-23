@@ -79,7 +79,6 @@ bool Nss::csv()
     bool is_first_line = true;
     string line;
     string token;
-    string delimiter = ",";
     stringstream ss;
     ifstream file;
     
@@ -98,7 +97,7 @@ bool Nss::csv()
         while (std::getline(ss, line, '\n')) {
             if (!is_first_line) {
                 n = 0;
-                while ((p = line.find(delimiter)) != std::string::npos) {
+                while ((p = line.find(",")) != std::string::npos) {
                     token = line.substr(0, p);
                     switch(n)
                     {
@@ -127,7 +126,7 @@ bool Nss::csv()
                         default:
                             break;
                     }
-                    line.erase(0, (p + delimiter.length()));
+                    line.erase(0, (p + 1));
                     ++n;
                 }
                 ports.push_back(line);
@@ -145,6 +144,8 @@ bool Nss::csv()
 
 void Nss::driver()
 { 
+    bool has_term = false;
+    bool is_nmap = false;
     int key;
     int c_field = 0;
     vector<string> terms;
@@ -201,24 +202,24 @@ void Nss::driver()
                     break;
                 case KEY_RETURN:
                     if (c_field == 8) {
-                        bool has_terms = false;
-                        bool is_xml = false;
                         vector<string>().swap(terms);
                         for (int i = 0; i <= 7; i++) { 
                             terms.push_back(clear_whitespaces(field_buffer(ui.fields[i], 0)));
                             if (terms[i] != "")
-                                has_terms = true;
+                                has_term = true;
                         }
-                        if (!has_terms)
+                        if (!has_term)
                             break;
                         else if (terms[7] != "")
-                            is_xml = true;
-                        if (search(&terms, is_xml))
+                            is_nmap = true;
+                        if (search(&terms, is_nmap))
                             ui.result(&ids, &files, &descriptions,
                                       &dates, &platforms, &types,
                                       &results, &user_configs);
                         else
                             ui.status("NO RESULT");
+                        has_term = false;
+                        is_nmap = false;
                     }
                     break;
                 case KEY_UPDATE:
@@ -241,7 +242,7 @@ void Nss::driver()
     } while (key != KEY_QUIT);
 }
 
-bool Nss::search(vector<string> *terms, bool is_xml)
+bool Nss::search(vector<string> *terms, bool is_nmap)
 {
     bool is_not_found = false;
     bool is_invalid_term = false;
@@ -249,7 +250,6 @@ bool Nss::search(vector<string> *terms, bool is_xml)
     string second_term;
     string term;
     string buf;
-    stringstream ss;
     vector<int> n_results;
     const vector<string> invalid_terms =
     {
@@ -268,7 +268,7 @@ bool Nss::search(vector<string> *terms, bool is_xml)
 
     vector<int>().swap(results);
     
-    if (!is_xml) {
+    if (!is_nmap) {
         for (size_t i = 0; i < ids.size(); i++) {
             if (((*terms)[0] != "") && (ids[i].find((*terms)[0]) == string::npos))
                 is_not_found = true;
@@ -304,10 +304,10 @@ bool Nss::search(vector<string> *terms, bool is_xml)
         vector<string>().swap((*terms));
         if (xml(buf, &terms)) {
             for (size_t i = 0; i < terms->size(); i++) {
-                ss.str((*terms)[i]);
-                ss >> first_term >> second_term;
+                stringstream ss((*terms)[i]);
                 term = ss.str();
-                for (size_t ii = 0; ii < 4; ii++) {
+                ss >> first_term >> second_term;
+                for (size_t ii = 0; ii < 3; ii++) {
                     vector<int>().swap(n_results);
                     switch(ii)
                     {
@@ -316,9 +316,6 @@ bool Nss::search(vector<string> *terms, bool is_xml)
                             break;
                         case 2:
                             term = first_term;
-                            break;
-                        case 3:
-                            term = second_term;
                             break;
                     }
                     for (size_t iii = 0; iii < invalid_terms.size(); iii++)
@@ -335,7 +332,7 @@ bool Nss::search(vector<string> *terms, bool is_xml)
                             for (size_t iiiii = 0; iiiii < n_results.size(); iiiii++)
                                 results.push_back(n_results[iiiii]);
                     }
-                } // TODO: FALTA LEER EL ULTIMO TERM (Dropbear) Y LIMPIAR (/-_) EN xml().
+                }
             }
         } else {
             return false;
@@ -383,9 +380,9 @@ bool Nss::xml(const string &path, vector<string> **terms)
                         for (size_t ii = 1; ii < 3; ii++) {
                             attribute = element->get_attribute(xattributes[ii]);
                             if (attribute)
-                                buf = buf + string(" ") + attribute->get_value();
+                                buf =  buf + string(" ") + attribute->get_value();
                         }
-                        if (buf != "") {
+                        if (buf != "") { // TODO: NOT DUPLICATED TERMS AND CLEAR (/-_)
                             std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
                             (*terms)->push_back(buf);
                         }

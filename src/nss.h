@@ -35,7 +35,7 @@ private:
     bool config();
     bool csv();
     void driver();
-    bool search(vector <string> *terms, bool is_xml);
+    bool search(vector <string> *terms, bool is_nmap);
     bool xml(const string &path, vector<string> **terms);
     bool update();
     string clear_whitespaces(const char *c);
