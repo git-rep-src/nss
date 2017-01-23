@@ -52,6 +52,14 @@ bool Nss::config()
             while (getline(file, line)) {
                 if (line.find(configs[i]) != string::npos) {
                     if ((line.erase(0, configs[i].size())).size() != 0) {
+                        if (i == 2) {
+                            if ((line == "vim") || (line == "gvim"))
+                                line = line + string(" --not-a-term "); 
+                            else if (line == "nano")
+                                line = line + string(" - "); 
+                            else    
+                                line = line + string(" "); 
+                        }
                         user_configs.push_back(line);
                         break;
                     } else {
@@ -94,10 +102,10 @@ bool Nss::csv()
     file.open(user_configs[0] + "files.csv");
     if (file.is_open()) {
         ss << file.rdbuf();
-        while (std::getline(ss, line, '\n')) {
+        while (getline(ss, line, '\n')) {
             if (!is_first_line) {
                 n = 0;
-                while ((p = line.find(",")) != std::string::npos) {
+                while ((p = line.find(",")) != string::npos) {
                     token = line.substr(0, p);
                     switch(n)
                     {
@@ -274,7 +282,7 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
                 is_not_found = true;
             if (((*terms)[1] != "") && !is_not_found) {
                 buf = descriptions[i]; 
-                std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
                 if (buf.find((*terms)[1]) == string::npos)
                     is_not_found = true;
             }
@@ -324,7 +332,7 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
                     if (!is_invalid_term) {
                         for (size_t iiii = 0; iiii < ids.size(); iiii++) {
                             buf = descriptions[iiii]; 
-                            std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                            transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
                             if (buf.find(term) != string::npos)
                                 n_results.push_back(iiii);
                         }
@@ -382,9 +390,16 @@ bool Nss::xml(const string &path, vector<string> **terms)
                             if (attribute)
                                 buf =  buf + string(" ") + attribute->get_value();
                         }
-                        if (buf != "") { // TODO: NOT DUPLICATED TERMS AND CLEAR (/-_)
-                            std::transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-                            (*terms)->push_back(buf);
+                        if (buf != "") {
+                            bool has_term = false;
+                            replace(buf.begin(), buf.end(), '/', ' ');
+                            transform(buf.begin(), buf.end(), buf.begin(), ::tolower);
+                            for (size_t iii = 0; iii < (*terms)->size(); iii++) {
+                                if ((**terms)[iii].find(buf) != string::npos)
+                                    has_term = true;
+                            }
+                            if (!has_term)
+                                (*terms)->push_back(buf);
                         }
                         buf.clear();
                     }

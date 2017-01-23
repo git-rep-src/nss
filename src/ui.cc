@@ -198,13 +198,11 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
                         was_copy = true;
                 if (was_copy) { 
                     cmd = (*user_configs)[2] +
-                          string(" ") +
                           (*user_configs)[1] +
                           (*ids)[(*results)[c_item]] +
                           string(".*");
                 } else {
                     cmd = (*user_configs)[2] +
-                          string(" ") +
                           (*user_configs)[0] +
                           (*files)[(*results)[c_item]];
                 }
@@ -287,19 +285,14 @@ void Ui::marker(bool show)
 
 bool Ui::cli(const string &cmd, bool is_editor)
 {
-    if (is_editor) {            
+    FILE *fp = popen(cmd.c_str(), "w");
+    if (!fp) 
+        return false;
+    if (pclose(fp) != 0)
+        return false;
+    
+    if (is_editor)
         endwin();
-        if (system(cmd.c_str()) < 0) {
-            refresh();
-            return false;
-        }
-    } else {
-        FILE *fp = popen(cmd.c_str(), "w");
-        if (!fp) 
-            return false;
-        if (pclose(fp) != 0)
-            return false;
-    }
    
     return true;
 }
