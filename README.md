@@ -20,7 +20,3 @@ make install
 git=/path/exploit-database/
 copy=/path/my-exploits/
 editor=editor
-```
-## LICENSE
-
-Free Software under GPL 2.
