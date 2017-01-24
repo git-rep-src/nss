@@ -9,8 +9,6 @@
 #include <unistd.h>
 #include <pwd.h>
 
-#include <iostream>//
-
 using std::ifstream;
 using std::stringstream;
 
@@ -30,6 +28,7 @@ Nss::Nss() :
             is_ui_blocked = true;
         }
     }
+    
     driver();
 }
 
@@ -40,7 +39,7 @@ Nss::~Nss()
 bool Nss::config()
 {
     string line;
-    vector<string> configs = {"git_path=", "cp_path=", "editor="};
+    const vector<string> configs = {"git_path=", "cp_path=", "editor="};
     ifstream file;
     
     passwd *pw = getpwuid(getuid());
@@ -198,7 +197,7 @@ void Nss::driver()
                         form_driver(ui.form, REQ_END_LINE);
                     }
                     if (c_field == 8)
-                        ui.marker();
+                        ui.marker(true);
                     else
                         set_field_back(ui.fields[c_field], COLOR_PAIR(2));
                     break;
@@ -220,12 +219,19 @@ void Nss::driver()
                             break;
                         else if (terms[7] != "")
                             is_nmap = true;
-                        if (search(&terms, is_nmap))
+                        int c_rows = LINES;
+                        int c_cols = COLS;
+                        if (search(&terms, is_nmap)) {
                             ui.result(&ids, &files, &descriptions,
                                       &dates, &platforms, &types,
                                       &results, &user_configs);
-                        else
+                        } else {
                             ui.status("NO RESULT");
+                        }
+                        if ((c_rows != LINES) || (c_cols != COLS)) {
+                            ui.resize();
+                            c_field = 0;
+                        }
                         has_term = false;
                         is_nmap = false;
                     }
@@ -242,6 +248,10 @@ void Nss::driver()
                         ui.status("UPDATE DB ERROR");
                     }
                     break;
+                case KEY_RESIZE:
+                    ui.resize();
+                    c_field = 0;
+                    break;
                 default:
                     form_driver(ui.form, key);
                     break;
@@ -253,13 +263,14 @@ void Nss::driver()
 bool Nss::search(vector<string> *terms, bool is_nmap)
 {
     bool is_not_found = false;
-    bool is_invalid_term = false;
-    string first_term;
-    string second_term;
+    bool is_invalid = false;
+    string first;
+    string second;
     string term;
     string buf;
+    string buff;
     vector<int> n_results;
-    const vector<string> invalid_terms =
+    const vector<string> invalids =
     {
         "microsoft",
         "windows",
@@ -281,31 +292,48 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
             if (((*terms)[0] != "") && (ids[i].find((*terms)[0]) == string::npos))
                 is_not_found = true;
             if (((*terms)[1] != "") && !is_not_found) {
-                buf = descriptions[i]; 
+                buf = descriptions[i];
+                buff = (*terms)[1];
                 transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
-                if (buf.find((*terms)[1]) == string::npos)
+                transform(buff.begin(), buff.end(), buff.begin(), ::tolower); 
+                if (buf.find(buff) == string::npos)
                     is_not_found = true;
             }
             if (((*terms)[2] != "") && !is_not_found &&
                 (dates[i].find((*terms)[2]) == string::npos))
                 is_not_found = true;
-            if (((*terms)[3] != "") && !is_not_found &&
-                (authors[i].find((*terms)[3]) == string::npos))
-                is_not_found = true;
-            if (((*terms)[4] != "") && !is_not_found &&
-                (platforms[i].find((*terms)[4]) == string::npos))
-                is_not_found = true;
-            if (((*terms)[5] != "") && !is_not_found &&
-                (types[i].find((*terms)[5]) == string::npos))
-                is_not_found = true;
+            if (((*terms)[3] != "") && !is_not_found) {
+                buf = authors[i]; 
+                buff = (*terms)[3];
+                transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                transform(buff.begin(), buff.end(), buff.begin(), ::tolower); 
+                if (buf.find(buff) == string::npos)
+                    is_not_found = true;
+            }
+            if (((*terms)[4] != "") && !is_not_found) {
+                buf = platforms[i]; 
+                buff = (*terms)[4];
+                transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                transform(buff.begin(), buff.end(), buff.begin(), ::tolower); 
+                if (buf.find(buff) == string::npos)
+                    is_not_found = true;
+            }
+            if (((*terms)[5] != "") && !is_not_found) {
+                buf = types[i]; 
+                buff = (*terms)[5];
+                transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
+                transform(buff.begin(), buff.end(), buff.begin(), ::tolower); 
+                if (buf.find(buff) == string::npos)
+                    is_not_found = true;
+            }
             if (((*terms)[6] != "") && !is_not_found &&
                 (ports[i].find((*terms)[6]) == string::npos))
                 is_not_found = true;
             
-            if (!is_not_found)
-                results.push_back(i);
-            else
+            if (is_not_found)
                 is_not_found = false;
+            else
+                results.push_back(i);
         }
     } else {
         buf = (*terms)[7];
@@ -314,22 +342,22 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
             for (size_t i = 0; i < terms->size(); i++) {
                 stringstream ss((*terms)[i]);
                 term = ss.str();
-                ss >> first_term >> second_term;
-                for (size_t ii = 0; ii < 3; ii++) {
+                ss >> first >> second;
+                for (size_t ii = 0; ii <= 2; ii++) {
                     vector<int>().swap(n_results);
                     switch(ii)
                     {
                         case 1:
-                            term = first_term + string(" ") + second_term;
+                            term = first + string(" ") + second;
                             break;
                         case 2:
-                            term = first_term;
+                            term = first;
                             break;
                     }
-                    for (size_t iii = 0; iii < invalid_terms.size(); iii++)
-                        if (term == invalid_terms[iii])
-                            is_invalid_term = true;
-                    if (!is_invalid_term) {
+                    for (size_t iii = 0; iii < invalids.size(); iii++)
+                        if (term == invalids[iii])
+                            is_invalid = true;
+                    if (!is_invalid) {
                         for (size_t iiii = 0; iiii < ids.size(); iiii++) {
                             buf = descriptions[iiii]; 
                             transform(buf.begin(), buf.end(), buf.begin(), ::tolower); 
@@ -339,6 +367,8 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
                         if (n_results.size() < 100)
                             for (size_t iiiii = 0; iiiii < n_results.size(); iiiii++)
                                 results.push_back(n_results[iiiii]);
+                    } else {
+                        is_invalid = false;
                     }
                 }
             }
@@ -353,7 +383,7 @@ bool Nss::search(vector<string> *terms, bool is_nmap)
     return true;
 }
 
-bool Nss::xml(const string &path, vector<string> **terms)
+bool Nss::xml(const string &file, vector<string> **terms)
 {
     string buf;
     const vector<string> xpaths =
@@ -365,7 +395,7 @@ bool Nss::xml(const string &path, vector<string> **terms)
 
     try {
         xmlpp::DomParser parser;
-        parser.parse_file(path);
+        parser.parse_file(file);
         xmlpp::Node *root = parser.get_document()->get_root_node();
         
         xmlpp::Node::NodeSet node;
@@ -385,7 +415,7 @@ bool Nss::xml(const string &path, vector<string> **terms)
                     if (attribute->get_value() == "open") {
                         node = root->find(xpaths[1]);
                         element = (xmlpp::Element *)node.at(i);
-                        for (size_t ii = 1; ii < 3; ii++) {
+                        for (size_t ii = 1; ii <= 2; ii++) {
                             attribute = element->get_attribute(xattributes[ii]);
                             if (attribute)
                                 buf =  buf + string(" ") + attribute->get_value();
