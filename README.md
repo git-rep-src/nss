@@ -1,10 +1,8 @@
 # Nss - Ncurses search sploit
 
-Exploit-DB's Offensive Security Ncurses search tool.
+[Exploit-DB's Offensive Security](https://github.com/offensive-security/exploit-database) Ncurses search tool.
 
 ## INSTALLATION
-
-  [exploit-database](https://github.com/offensive-security/exploit-database.git)
 
 ```shell
 ncurses  >= 6.0
@@ -19,12 +17,9 @@ make install
 ~/.nss
 
 ```shell
-# PATH TO EXPLOIT-DATABASE
-git=/home/user/exploit-database/
-# PATH TO COPY EXPLOITS
-copy=/home/user/exploits/
-# EDITOR TO OPEN EXPLOITS
-editor=vim
+git=/home/user/exploit-database/ # PATH TO EXPLOIT-DATABASE
+copy=/home/user/exploits/        # PATH TO COPY EXPLOITS
+editor=vim                       # EDITOR TO OPEN EXPLOITS
 ```
 ## LICENSE
 
