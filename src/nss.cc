@@ -39,7 +39,7 @@ Nss::~Nss()
 bool Nss::config()
 {
     string line;
-    const vector<string> configs = {"git_path=", "cp_path=", "editor="};
+    const vector<string> configs = {"git=", "copy=", "editor="};
     ifstream file;
     
     passwd *pw = getpwuid(getuid());
