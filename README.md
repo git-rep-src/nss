@@ -17,9 +17,9 @@ make install
 ~/.nss
 
 ```shell
-git=/home/user/exploit-database/ # PATH TO EXPLOIT-DATABASE
-copy=/home/user/exploits/        # PATH TO COPY EXPLOITS
-editor=vim                       # EDITOR TO OPEN EXPLOITS
+git=/path/exploit-database/
+copy=/path/my-exploits/
+editor=editor
 ```
 ## LICENSE
 
