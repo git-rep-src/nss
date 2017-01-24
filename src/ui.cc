@@ -47,10 +47,8 @@ Ui::~Ui()
     endwin();
 }
 
-void Ui::main()
+void Ui::main(bool is_refresh)
 {
-    // TODO: RESIZE.
-
     int rows;
     int cols;
     int start_x = ((w_cols - 43) / 2);
@@ -89,7 +87,7 @@ void Ui::main()
     set_field_back(fields[6], COLOR_PAIR(1));
     set_field_back(fields[7], COLOR_PAIR(1));
     set_field_back(fields[8], COLOR_PAIR(1));
-    
+   
     stringstream ss;
     ss << std::setw(7.77) << std::setfill(' ') << "" << "SEARCH";
     set_field_buffer(fields[8], 0, ss.str().c_str());
@@ -110,8 +108,9 @@ void Ui::main()
     mvwprintw(window, (start_y + 14), (start_x - 6),  "NMAP");
 
     prefresh(window, 0, 0, 0, 0, (LINES - 1), (COLS - 1));
-    
-    status("<CU> UPDATE DB | <CE> EXIT");
+   
+    if (!is_refresh)
+        status("<CU> UPDATE DB | <CE> EXIT");
 
     set_current_field(form, fields[0]);
     form_driver(form, REQ_END_LINE);
@@ -140,11 +139,13 @@ void Ui::result(const vector<string> *ids, const vector<string> *files,
     for (size_t i = 1; i <= n_results; i++) {
         items[i] = subpad(items[0], 1, (COLS - 5), (i - 1), 0);
         p = (COLS - 54);
-        if ((*descriptions)[(*results)[i - 1]].size() >= p)
-            (*descriptions)[(*results)[i - 1]].replace((p - 3),
-                                                       ((*descriptions)[(*results)[i - 1]].size() -
-                                                        (p - 3)), "...");
-        mvwprintw(items[i], 0, 0, "%s", (*descriptions)[(*results)[i - 1]].c_str());
+        if ((*descriptions)[(*results)[i - 1]].size() >= p) {
+            string buf = (*descriptions)[(*results)[i - 1]]; 
+            buf.replace((p - 3), buf.size() - (p - 3), "...");
+            mvwprintw(items[i], 0, 0, "%s", buf.c_str());
+        } else {
+            mvwprintw(items[i], 0, 0, "%s", (*descriptions)[(*results)[i - 1]].c_str());
+        }
         mvwprintw(items[i], 0, (COLS - 50), "%s", (*dates)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 36), "%s", (*platforms)[(*results)[i - 1]].c_str());
         mvwprintw(items[i], 0, (COLS - 24), "%s", (*types)[(*results)[i - 1]].c_str());
@@ -281,6 +282,30 @@ void Ui::marker(bool show)
         wattroff(window, COLOR_PAIR(1));
         curs_set(1);
     }
+}
+
+void Ui::resize()
+{
+    clear();
+
+    if (LINES < 24)
+        w_rows = 24;
+    else
+        w_rows = LINES;
+    
+    if (COLS < 67)
+        w_cols = 67;
+    else
+        w_cols = COLS;
+
+    clear_form();
+    main(true);
+    
+    curs_set(1);
+
+    endwin();
+
+    refresh();
 }
 
 bool Ui::cli(const string &cmd, bool is_editor)

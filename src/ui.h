@@ -28,13 +28,14 @@ public:
     FORM *form;
     FIELD *fields[10];
     
-    void main();
+    void main(bool is_refresh = false);
     void result(const vector<string> *ids, const vector<string> *files,
                 vector<string> *descriptions, const vector<string> *dates,
                 const vector<string> *platforms, const vector<string> *type,
                 const vector<int> *results, const vector<string> *user_configs);
     void status(const string &s);
-    void marker(bool show = true);
+    void marker(bool show);
+    void resize();
 
 private:
     int w_rows;
