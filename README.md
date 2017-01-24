@@ -7,7 +7,7 @@ Exploit-DB's (Offensive Security) Ncurses search tool.
 ```shell
 ncurses  >= 6.0
 libxml++ >= 3.0
-exploit-database (https://github.com/offensive-security/exploit-database.git)
+exploit-database https://github.com/offensive-security/exploit-database.git
 ```
 ```shell
 make
@@ -18,14 +18,9 @@ make install
 ~/.nss
 
 ```shell
-# Path to exploit-database directory.
-git_path=/home/user/exploit-database/
-
-# Path to copy exploits directory.
-cp_path=/home/user/
-
-# Editor to open exploits.
-editor=vim
+git_path=/path/exploit-database/
+cp_path=/path/working_directory/
+editor=editor_to_open_exploits
 ```
 ## LICENSE
 
