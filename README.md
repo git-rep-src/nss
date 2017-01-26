@@ -2,6 +2,8 @@
 
 [Exploit-DB's Offensive Security](https://github.com/offensive-security/exploit-database) Ncurses search tool.
 
+[video](https://sendvid.com/sgdjf598)
+
 ## INSTALLATION
 
 ```shell
